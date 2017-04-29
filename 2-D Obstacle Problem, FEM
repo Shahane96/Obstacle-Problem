@@ -1,0 +1,81 @@
+from mpl_toolkits.mplot3d import Axes3D
+import matplotlib.pyplot as plt
+import plotly.plotly as py
+from plotly.graph_objs import *
+import numpy as np
+import matplotlib.cm as cm
+from scipy.spatial import Delaunay
+from functools import reduce
+import argparse
+import getpass
+
+def parse_args(*argument_array):
+    parser = argparse.ArgumentParser()
+    parser.set_defaults(function=main)
+    args = parser.parse_args(*argument_array)
+    return args
+
+def obstacle(x,y):
+    obs = 35-(x-0.25)**2 - (y-0.25)**2
+    return obs
+  
+def GS(x, y, it):
+    
+    it_1 = 0
+    w = np.zeros(shape=(len(x),len(y)))
+    w_t = np.zeros(shape=(len(x),len(y)))
+    for k in range(0, it):
+        it_1 +=1
+        for i in range(1, len(x)-1): 
+            for j in range(1, len(y)-1):
+                w[i][j] = max(0.25*(w[i+1][j] + w[i-1][j] + w[i][j+1] + w[i][j-1]),obstacle(x[i],y[j]))
+        if(np.linalg.norm(w-w_t)<0.0001):
+            print(it_1)
+            return {'X': x, 'Y': y, 'W': w} 
+            break
+        else:
+            w_t = np.array(w)
+          
+    return {'X': x, 'Y': y, 'W': w} 
+    
+
+                     
+
+def main(args):
+    u=np.linspace(-8,9, 20)
+    v=np.linspace(-8,9, 20)
+    u,v=np.meshgrid(u,v)
+    u=u.flatten()
+    v=v.flatten()
+
+    tp=1+0.5*v*np.cos(u/2.)
+    x=tp*np.cos(u)
+    y=tp*np.sin(u)
+
+
+    points2D=np.vstack([u,v]).T
+    tri = Delaunay(points2D)
+
+
+    x = points2D[:,0]
+    y = points2D[:,1]
+
+    z = GS(x, y, 10)['W']
+    z = z.diagonal()
+
+    obs = 35-(x-0.25)**2 - (y-0.25)**2
+
+    fig = plt.figure()
+
+    fig.set_size_inches(18.5, 10.5)
+
+    ax = fig.gca(projection='3d')
+
+    ax.plot_trisurf(x, y, z, cmap=cm.jet, linewidth=0.2)
+    ax.plot_trisurf(x, y, obs, cmap=cm.jet, linewidth=0.2)
+    plt.show()
+
+	
+if __name__ == '__main__':
+    args = parse_args()
+    args.function(args)
