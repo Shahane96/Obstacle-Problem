@@ -1,0 +1,60 @@
+from __future__ import division
+import matplotlib.pyplot as plt
+import numpy as np
+import argparse
+import getpass
+
+
+def parse_args(*argument_array):
+    parser = argparse.ArgumentParser()
+    parser.set_defaults(function=main)
+    args = parser.parse_args(*argument_array)
+    return args
+
+def obstacle(x):
+    obs = 5 - (x-2.25)*(x-2.25)
+    return obs
+
+#Gauss-Seidel algorithm
+def GS(weights, interval, partition, it, obst):
+    int_len = interval[len(interval)-1] - interval[0]
+    w = weights
+    w_t = [0] * (partition+1) 
+    it_1 = 0
+    x = [0] * (partition+1)
+    for i in range(0, partition+1):
+        x[i] = interval[0]+(int_len*i) / partition
+    for j in range(0, it):
+        it_1 +=1
+        for i in range(0, len(x)-2): 
+            w[i+1] = max((0.5*w[i+2] + 0.5*w[i]),obst(x[i+1]))
+        if(np.linalg.norm(np.array([w])-np.array([w_t]))<0.00001):
+            print("y")
+            print(it_1)
+            return {'X': x, 'W': w}
+            break
+        else: 
+            w_t = list(w)
+
+    return {'X': x, 'W': w} 
+                     
+
+def main(args):
+    interval_sol = [-2,6.5]
+    partition = 100
+    w = [0] * (partition+1) 
+    it = 300
+
+    xs = GS(w, interval_sol, partition, it, obstacle)['X']
+    ys = GS(w, interval_sol, partition, it, obstacle)['W']
+
+    xx = np.linspace(0, 4.5, 1000)
+    y = 5 - (xx-2.25)*(xx-2.25) 
+
+    fig, ax = plt.subplots()
+    plt.plot(xx, y, 'b',xs, ys, 'r')
+    plt.show()
+	
+if __name__ == '__main__':
+    args = parse_args()
+    args.function(args)
