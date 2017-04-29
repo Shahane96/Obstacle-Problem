@@ -1,0 +1,128 @@
+from __future__ import division
+import matplotlib.pyplot as plt
+import numpy as np
+import argparse
+import getpass
+
+
+def parse_args(*argument_array):
+    parser = argparse.ArgumentParser()
+    parser.set_defaults(function=main)
+    args = parser.parse_args(*argument_array)
+    return args
+
+def obstacle(x):
+    if(x>0 and x<4.5):
+        return 5 - (x-2.25)*(x-2.25)
+    else: 
+        return 0
+
+
+#Gauss-Seidel algorithm
+def GS(a, b, v, x_1, max_iteration=500):
+  
+    x = [0] * (len(a)+2)
+    omega = 1.2
+    it_1 = 0
+    v_t = [0] * (len(v))
+    for __ in range(max_iteration):
+        it_1 +=1
+        for i in range(len(a)):
+            s = sum(-a[i][j] * x[j+1] for j in range(len(a)) if i != j)
+            
+            x[i+1] = (b[i] + s) / a[i][i]
+      
+            v[i+1] = max(((1-omega)*v[i+1]+ omega*x[i+1]),obstacle(x_1[i+1]))
+            x[i+1] = v[i+1]
+        if(np.linalg.norm(np.array([v])-np.array([v_t]))<0.0001):
+            print(it_1)
+            return v
+            break
+        else:
+            v_t = list(v)
+    return v 
+                     
+def hat1(x, x1, x2):
+    y = (x-x1)/(x2-x1)
+    return y
+
+
+def int_hat1_f(x1,x2): #using Simpson's rule for integral evaluation
+    xm = (x1+x2)*0.5
+    y = (x2-x1)*(f(x1)*hat1(x1,x1,x2) + 4*f(xm)*hat1(xm,x1,x2) + f(x2)*hat1(x2,x1,x2))/6
+    return y
+    
+def f(x):
+    y = 0
+    return y
+    
+def hat2(x, x1, x2):
+    y = (x2-x)/(x2-x1)
+    return y
+
+def int_hat2_f(x1,x2): #using Simpson's rule for integral evaluation
+    xm = (x1+x2)*0.5
+    y = (x2-x1)*(f(x1)*hat2(x1,x1,x2) + 4*f(xm)*hat2(xm,x1,x2) + f(x2)*hat2(x2,x1,x2))/6
+    return y
+    
+def fem(x, v):
+    
+    h = [1]*(len(x)-1)
+
+    for i in range(0, len(x) - 2):
+        h[i] = x[i+1] - x[i]
+    
+    A = np.zeros(shape=(len(x),len(x)))
+    F = np.zeros(shape=(len(x),1))
+    
+
+    F[0] = F[len(x) - 1] = 0
+    A[1][1] = A[len(x)-2][len(x)-2] = 1/h[0]
+    F[1] = int_hat1_f(x[0],x[1])
+    
+    
+    for i in range(1, len(x) - 2):
+        A[i][i] = A[i][i] + 1/h[i]
+        A[i][i+1] = A[i][i+1] - 1/h[i]
+        A[i+1][i] = A[i+1][i] - 1/h[i]
+        A[i+1][i+1] = A[i+1][i+1] + 1/h[i]
+        F[i] = F[i] + int_hat2_f(x[i], x[i+1])
+        F[i+1] = F[i+1] + int_hat1_f(x[i], x[i+1])
+    
+   
+    F[len(x) - 2] = F[len(x) - 2] + int_hat2_f(x[len(x) - 2], x[len(x) - 1])
+    A = A[1:-1, 1:-1]
+    F = F[1:-1]
+
+    U = GS(A, F, v, x)
+
+    return U
+    
+    
+def main(args):
+    partition = 50
+
+    x2 = [0] * (partition+1)
+    interval = [-2,6.5]
+    int_len = interval[len(interval)-1] - interval[0]
+
+
+    for i in range(0, partition+1):
+        x2[i] = interval[0]+(int_len*i) / partition
+
+    v = [0] * (len(x2))
+
+    for i in range(0, len(x2)-1):
+        v[i+1] = obstacle(x2[i+1])
+
+    x1 = np.linspace(0, 4.5, 1000)
+    y2 = fem(x2, v)
+    y1 = 5 - (x1-2.25)*(x1-2.25)
+
+    fig, ax = plt.subplots()
+    plt.plot(x2, y2, 'r',x1, y1, 'b')
+    plt.show()
+	
+if __name__ == '__main__':
+    args = parse_args()
+    args.function(args)
